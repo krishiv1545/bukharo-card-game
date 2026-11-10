@@ -28,6 +28,15 @@ class RoomConsumer(AsyncJsonWebsocketConsumer):
     async def receive_json(self, content, **kwargs):
         if not isinstance(content, dict):
             return await self.send_json({"type": "ERROR", "message": "malformed"})
+        if content.get("type") == "CHAT":
+            text = str(content.get("text", ""))[:500].strip()
+            if text:
+                await self.channel_layer.group_send(self.group, {
+                    "type": "room.chat",
+                    "from": self.user.username,
+                    "text": text,
+                })
+            return
         try:
             await database_sync_to_async(services.handle)(self.user, self.code, content)
         except services.ActionError as e:
@@ -38,3 +47,6 @@ class RoomConsumer(AsyncJsonWebsocketConsumer):
         view = await database_sync_to_async(services.view_for)(self.user, self.code)
         if view is not None:
             await self.send_json({"type": "STATE", **view})
+
+    async def room_chat(self, event):
+        await self.send_json({"type": "CHAT", "from": event["from"], "text": event["text"]})

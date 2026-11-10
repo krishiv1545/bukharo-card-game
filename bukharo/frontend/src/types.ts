@@ -15,3 +15,4 @@ export interface GameV {
 export interface MemberV { username: string; ready: boolean; team: string }
 export interface RoomV { code: string; status: "lobby" | "playing" | "finished"; host: string; config: Record<string, unknown>; members: MemberV[] }
 export interface StateMsg { type: "STATE"; room: RoomV; game: GameV | null }
+export interface ChatMsg { from: string; text: string; at: number }

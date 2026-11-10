@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { StateMsg } from "./types";
+import type { ChatMsg, StateMsg } from "./types";
 
 /** One socket per room. Reconnects with backoff; the server resends full state on every (re)connect. */
 export function useRoom(code: string) {
@@ -7,6 +7,7 @@ export function useRoom(code: string) {
   const [error, setError] = useState<string | null>(null);
   const [online, setOnline] = useState(false);
   const [denied, setDenied] = useState(false);
+  const [chat, setChat] = useState<ChatMsg[]>([]);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export function useRoom(code: string) {
         const m = JSON.parse(e.data);
         if (m.type === "STATE") setState(m as StateMsg);
         else if (m.type === "ERROR") setError(m.message as string);
+        else if (m.type === "CHAT") setChat(prev => [...prev.slice(-199), { from: m.from, text: m.text, at: Date.now() }]);
       };
       s.onclose = (ev) => {
         setOnline(false);
@@ -33,6 +35,13 @@ export function useRoom(code: string) {
   const send = useCallback((action: object) => {
     if (ws.current?.readyState === WebSocket.OPEN) ws.current.send(JSON.stringify(action));
   }, []);
+
+  const sendChat = useCallback((text: string) => {
+    const t = text.trim();
+    if (t && ws.current?.readyState === WebSocket.OPEN)
+      ws.current.send(JSON.stringify({ type: "CHAT", text: t }));
+  }, []);
+
   const clearError = useCallback(() => setError(null), []);
-  return { state, error, online, denied, send, clearError };
+  return { state, error, online, denied, send, clearError, chat, sendChat };
 }

@@ -27,7 +27,7 @@ export function Lobby({ room, me, send }: Props) {
   const input = "w-24 rounded bg-black/30 px-2 py-1 text-right";
   return (
     <div className="mx-auto max-w-3xl space-y-5 p-6">
-      <h2 className="text-2xl font-bold">Lobby — room <span className="tracking-widest text-amber-300">{room.code}</span></h2>
+      <h2 className="text-2xl font-bold">Lobby · room <span className="tracking-widest text-amber-300">{room.code}</span></h2>
       <p className="text-sm opacity-80">Share the code (or this page's link) with your friends.</p>
       <table className="w-full text-sm">
         <thead><tr className="text-left opacity-70"><th>Player</th><th>Team (blank = solo)</th><th>Ready</th></tr></thead>
