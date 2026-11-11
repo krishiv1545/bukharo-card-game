@@ -24,6 +24,12 @@ export function CardFace({ card, selected, wild, style, ...rest }: FaceProps) {
 }
 
 export function CardBack({ style }: { style?: CSSProperties }) {
-  return <div style={{ width: "var(--cw)", ...style }}
-    className="aspect-[5/7] shrink-0 rounded-md border border-slate-300 bg-[repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a_4px,#2563eb_4px,#2563eb_8px)] shadow-md" />;
+  return <div
+    className="aspect-[5/7] shrink-0 rounded-md border border-slate-300 shadow-md"
+    style={{
+      width: "var(--cw)",
+      background: "repeating-linear-gradient(45deg, var(--back1), var(--back1) 4px, var(--back2) 4px, var(--back2) 8px)",
+      ...style,
+    }}
+  />;
 }

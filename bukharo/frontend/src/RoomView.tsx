@@ -4,8 +4,10 @@ import { Hand } from "./components/Hand";
 import { Lobby } from "./components/Lobby";
 import { Sidebar } from "./components/Sidebar";
 import { Table } from "./components/Table";
+import { THEMES } from "./theme";
 import { useHandOrder } from "./useHandOrder";
 import { useRoom } from "./useRoom";
+import { useTheme } from "./useTheme";
 import type { CardT } from "./types";
 
 const NO_CARDS: CardT[] = [];
@@ -90,6 +92,7 @@ export default function RoomView({ code, me, leave }: { code: string; me: string
   const { cards, move, sortBy } = useHandOrder(`bukharo:${code}:${me}`, game?.my_hand ?? NO_CARDS);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [resultDismissed, setResultDismissed] = useState(false);
+  const { themeId, setThemeId } = useTheme();
 
   // Track closed combos to fire confetti when a pile gets closed
   const closedRef = useRef(new Set<string>());
@@ -137,10 +140,25 @@ export default function RoomView({ code, me, leave }: { code: string; me: string
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex items-center gap-3 bg-black/30 px-3 py-1 text-xs">
+      <header className="flex items-center gap-3 px-3 py-1 text-xs" style={{ background: "var(--panel)" }}>
         <b>Bukharo</b><span>{me}</span>
         <span className={online ? "text-emerald-300" : "text-red-300"}>{online ? "connected" : "reconnecting…"}</span>
-        <button className="ml-auto underline opacity-70 hover:opacity-100" onClick={leave}>Leave</button>
+        <div className="ml-auto flex items-center gap-2">
+          <label className="flex items-center gap-2 text-[11px] text-slate-200/80">
+            <span className="hidden sm:inline">Theme</span>
+            <select
+              value={themeId}
+              onChange={(e) => setThemeId(e.target.value)}
+              className="rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-slate-100 outline-none transition-colors hover:bg-black/40"
+              aria-label="Theme"
+            >
+              {THEMES.map(theme => (
+                <option key={theme.id} value={theme.id}>{theme.name}</option>
+              ))}
+            </select>
+          </label>
+          <button className="underline opacity-70 hover:opacity-100" onClick={leave}>Leave</button>
+        </div>
       </header>
       {error && <div className="bg-red-700 px-3 py-1 text-sm cursor-pointer" onClick={clearError}>{error}</div>}
 

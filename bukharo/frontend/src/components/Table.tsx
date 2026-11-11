@@ -49,8 +49,8 @@ function ClosedPileCards({ c }: { c: ComboV }) {
   );
 }
 
-function Combo({ c, mine, isMine, canExtend, selected, onExtend }: {
-  c: ComboV; mine: boolean; isMine: boolean; canExtend: boolean; selected: Set<string>; onExtend: (ids: string[]) => void;
+function Combo({ c, mine, canExtend, selected, onExtend }: {
+  c: ComboV; mine: boolean; canExtend: boolean; selected: Set<string>; onExtend: (ids: string[]) => void;
 }) {
   const isSet = c.kind === "set";
 
@@ -58,9 +58,7 @@ function Combo({ c, mine, isMine, canExtend, selected, onExtend }: {
     "rounded-lg p-2 transition-all",
     c.closed
       ? "bg-emerald-900/60 ring-2 ring-emerald-400 shadow-emerald-400/30 shadow-md"
-      : isMine
-        ? "bg-amber-400/15 border-l-4 border-amber-400"
-        : "bg-black/15",
+      : "bg-black/15",
     canExtend ? "cursor-pointer hover:bg-white/15 ring-2 ring-amber-300/70" : "",
   ].join(" ");
 
@@ -139,16 +137,14 @@ export function Table({ game, me, hasSelection, selected, onExtend, onDiscardDro
         const isMyTeam = t === myTeam;
         return (
           <section key={t}>
-            <h3 className={`mb-2 text-sm font-semibold flex items-center gap-2 ${isMyTeam ? "text-amber-300" : "opacity-80"}`}>
+            <h3 className={`mb-2 text-sm font-semibold ${isMyTeam ? "text-amber-300" : "opacity-80"}`}>
               {t === members ? members : `Team ${t} (${members})`}
-              {isMyTeam && <span className="rounded bg-amber-400/20 border border-amber-400/50 px-1.5 text-xs text-amber-300">Your team</span>}
             </h3>
             <div className="flex flex-wrap gap-3">
               {combos.length === 0 && <span className="text-xs opacity-50">nothing laid down yet</span>}
               {combos.map((c) => (
                 <Combo key={c.id} c={c}
                   mine={c.team === myTeam && myTurn && game.phase === "play"}
-                  isMine={c.team === myTeam}
                   canExtend={canExtend(c)}
                   selected={selected}
                   onExtend={(ids) => onExtend(c.id, ids)} />
