@@ -89,7 +89,7 @@ function ResultModal({ game, me, onClose }: { game: import("./types").GameV; me:
 export default function RoomView({ code, me, leave }: { code: string; me: string; leave: () => void }) {
   const { state, error, online, denied, send, clearError, chat, sendChat } = useRoom(code);
   const game = state?.game ?? null;
-  const { cards, move, sortBy } = useHandOrder(`bukharo:${code}:${me}`, game?.my_hand ?? NO_CARDS);
+  const { cards, move, sortBy, autoCenter, setAutoCenter } = useHandOrder(`bukharo:${code}:${me}`, game?.my_hand ?? NO_CARDS);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [resultDismissed, setResultDismissed] = useState(false);
   const { themeId, setThemeId } = useTheme();
@@ -196,7 +196,7 @@ export default function RoomView({ code, me, leave }: { code: string; me: string
               </button>
               <span className="text-xs opacity-60">Select cards then click a pile to add, or drag onto it. Drag to the discard pile to discard.</span>
             </div>
-            <Hand cards={cards} selected={selected} toggle={toggle} move={move} sortBy={sortBy} />
+            <Hand cards={cards} selected={selected} toggle={toggle} move={move} sortBy={sortBy} autoCenter={autoCenter} setAutoCenter={setAutoCenter} />
           </div>
 
           {/* Victory / Defeat modal */}

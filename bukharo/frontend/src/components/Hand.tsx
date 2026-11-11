@@ -4,6 +4,7 @@ import { CardFace } from "./Card";
 interface Props {
   cards: CardT[]; selected: Set<string>; toggle: (id: string) => void; move: (id: string, before: string | null) => void;
   sortBy: (m: "suit" | "rank") => void;
+  autoCenter: boolean; setAutoCenter: (v: boolean) => void;
 }
 
 function makeDragImage(e: React.DragEvent): () => void {
@@ -16,13 +17,17 @@ function makeDragImage(e: React.DragEvent): () => void {
   return () => ghost.remove();
 }
 
-export function Hand({ cards, selected, toggle, move, sortBy }: Props) {
+export function Hand({ cards, selected, toggle, move, sortBy, autoCenter, setAutoCenter }: Props) {
   return (
     <div className="px-3 pb-3 pt-5" style={{ ["--cw" as string]: "clamp(44px, 5.2vw, 78px)" }}>
       <div className="mb-1 flex items-center gap-2 text-xs text-slate-200">
         <span>Your hand ({cards.length})</span>
         <button className="rounded bg-black/30 px-2 py-0.5 hover:bg-black/50 transition-colors" onClick={() => sortBy("suit")}>Sort by suit</button>
         <button className="rounded bg-black/30 px-2 py-0.5 hover:bg-black/50 transition-colors" onClick={() => sortBy("rank")}>Sort by rank</button>
+        <label className="flex items-center gap-1 rounded bg-black/30 px-2 py-0.5 text-slate-200 hover:bg-black/50 transition-colors">
+          <input type="checkbox" checked={autoCenter} onChange={(e) => setAutoCenter(e.target.checked)} />
+          <span>Auto</span>
+        </label>
         <span className="opacity-60">Drag to reorder · click to select</span>
       </div>
       <div className="flex min-h-[calc(var(--cw)*1.45+0.75rem)] items-end overflow-x-auto pb-1 pt-4"
