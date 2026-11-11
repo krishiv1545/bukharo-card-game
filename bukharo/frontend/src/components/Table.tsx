@@ -1,4 +1,5 @@
-import type { ComboV, GameV } from "../types";
+import { useEffect, useRef, useState } from "react";
+import type { ComboV, GameV, CardT } from "../types";
 import { CardBack, CardFace } from "./Card";
 
 interface Props {
@@ -95,12 +96,129 @@ function Combo({ c, mine, canExtend, selected, onExtend }: {
   );
 }
 
+function DiscardViewer({
+  discard,
+  isPinned,
+  isHolding,
+  onClose,
+}: {
+  discard: CardT[];
+  isPinned: boolean;
+  isHolding: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="relative flex flex-col max-h-[78vh] w-[92vw] max-w-md rounded-2xl bg-[#182c23] p-3.5 sm:p-4 text-slate-100 shadow-2xl ring-1 ring-white/15 select-none">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <span className="text-base font-bold text-amber-300">Discard Pile</span>
+          <span className="rounded bg-amber-400/20 px-2 py-0.5 text-xs font-semibold text-amber-200 ring-1 ring-amber-400/40">
+            {discard.length} {discard.length === 1 ? "card" : "cards"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-slate-300/70 hidden sm:inline">
+            Oldest → Top
+          </span>
+          <button
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300 hover:bg-white/20 hover:text-white transition-colors"
+            title="Close"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Cards Grid */}
+      <div
+        className="flex flex-wrap gap-2 overflow-y-auto p-2 bg-black/30 rounded-xl max-h-[52vh]"
+        style={{ ["--cw" as string]: "clamp(36px, 8.5vw, 46px)" }}
+      >
+        {discard.map((c, i) => {
+          const isTop = i === discard.length - 1;
+          const isBottom = i === 0;
+          return (
+            <div key={c.id} className="relative transition-transform hover:scale-105">
+              <CardFace card={c} />
+              {isTop && (
+                <span className="absolute -top-1.5 -right-1 rounded bg-amber-400 px-1 text-[9px] font-bold text-black shadow ring-1 ring-black/40">
+                  TOP
+                </span>
+              )}
+              {isBottom && discard.length > 1 && (
+                <span className="absolute -bottom-1 -left-1 rounded bg-slate-600 px-1 text-[8px] font-bold text-slate-200 opacity-90 shadow">
+                  1st
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer hint */}
+      <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 px-1">
+        <span>Total: {discard.length} cards</span>
+        <span className="text-amber-200/80">
+          {isPinned ? "Click ✕ or outside to close" : isHolding ? "Release finger to close" : "Move cursor away to close"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function Table({ game, me, hasSelection, selected, onExtend, onDiscardDrop, onTakeDiscard, onDraw }: Props) {
   const myTurn = game.current === me;
   const myTeam = game.players.find((p) => p.id === me)?.team;
   const teams = [...new Set(game.players.map((p) => p.team))];
   const top = game.discard[game.discard.length - 1];
   const canExtend = (c: ComboV) => myTurn && game.phase === "play" && hasSelection && c.team === myTeam && !c.closed;
+
+  const [isHovered, setIsHovered] = useState(false);
+  const [isHolding, setIsHolding] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
+  const holdTimerRef = useRef<number | null>(null);
+  const pileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isHovered && pileRef.current) {
+      const rect = pileRef.current.getBoundingClientRect();
+      const popoverWidth = Math.min(window.innerWidth - 32, 440);
+      const popoverHeight = 300;
+      let left = rect.left - 10;
+      if (left + popoverWidth > window.innerWidth - 16) {
+        left = window.innerWidth - popoverWidth - 16;
+      }
+      if (left < 16) left = 16;
+
+      let top = rect.top - popoverHeight - 12;
+      if (top < 16) {
+        top = rect.bottom + 12;
+      }
+      setPopoverPos({ top, left });
+    }
+  }, [isHovered]);
+
+  const startHold = () => {
+    if (game.discard.length === 0) return;
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = window.setTimeout(() => {
+      setIsHolding(true);
+    }, 180);
+  };
+
+  const endHold = () => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setIsHolding(false);
+  };
+
+  const isViewerOpen = (isPinned || isHolding || isHovered) && game.discard.length > 0;
+
   return (
     <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-2 sm:p-3">
       <div className="flex flex-wrap gap-2">
@@ -116,22 +234,97 @@ export function Table({ game, me, hasSelection, selected, onExtend, onDiscardDro
             </button>
             <div className="mt-1 font-medium">Draw ({game.draw_count})</div>
           </div>
+
           <div className="text-center text-xs">
-            <div className="flex min-h-[calc(var(--cw)*1.4)] min-w-[var(--cw)] items-center rounded-md border border-dashed border-white/40"
-              onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const id = e.dataTransfer.getData("text/plain"); if (id) onDiscardDrop(id); }}>
-              {game.discard.slice(-5).map((c, i) => <CardFace key={c.id} card={c} style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.7)" }} />)}
+            <div
+              ref={pileRef}
+              className="group relative cursor-pointer select-none"
+              onMouseEnter={() => { if (game.discard.length > 0) setIsHovered(true); }}
+              onMouseLeave={() => setIsHovered(false)}
+              onTouchStart={startHold}
+              onTouchEnd={endHold}
+              onTouchCancel={endHold}
+              onContextMenu={(e) => { if (game.discard.length > 0) e.preventDefault(); }}
+              onClick={() => { if (game.discard.length > 0) setIsPinned((p) => !p); }}
+              title={game.discard.length > 0 ? "Hover or hold to view all cards in discard pile" : undefined}
+            >
+              <div
+                className="flex min-h-[calc(var(--cw)*1.4)] min-w-[var(--cw)] items-center rounded-md border border-dashed border-white/40 transition-colors group-hover:border-amber-400/80 group-hover:bg-white/5"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { const id = e.dataTransfer.getData("text/plain"); if (id) onDiscardDrop(id); }}
+              >
+                {game.discard.slice(-5).map((c, i) => (
+                  <CardFace key={c.id} card={c} style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.7)" }} />
+                ))}
+              </div>
             </div>
-            <div className="mt-1 font-medium">Discard ({game.discard.length}){!top && " · empty"}</div>
-            <button disabled={!(myTurn && game.phase === "draw" && game.discard.length > 0)} onClick={onTakeDiscard}
-              className="mt-1 rounded bg-amber-400 px-2 py-0.5 font-semibold text-black disabled:opacity-40 transition-opacity active:scale-95 touch-manipulation">Take pile</button>
+
+            <div className="mt-1 flex items-center justify-center gap-1 font-medium">
+              <span>Discard ({game.discard.length}){!top && " · empty"}</span>
+              {game.discard.length > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsPinned((p) => !p);
+                  }}
+                  className="rounded bg-amber-400/20 px-1 py-0.2 text-[10px] font-semibold text-amber-300 hover:bg-amber-400/30 transition-colors"
+                  title="View all discarded cards"
+                >
+                  view all
+                </button>
+              )}
+            </div>
+
+            <button
+              disabled={!(myTurn && game.phase === "draw" && game.discard.length > 0)}
+              onClick={onTakeDiscard}
+              className="mt-1 rounded bg-amber-400 px-2 py-0.5 font-semibold text-black disabled:opacity-40 transition-opacity active:scale-95 touch-manipulation"
+            >
+              Take pile
+            </button>
           </div>
         </div>
+
         <div className="text-xs sm:text-sm flex-1 min-w-[140px]">
           {game.phase === "over" ? <b>Game over</b> : myTurn
             ? <b className="text-amber-300">Your turn: {game.phase === "draw" ? "draw a card" : "lay down, then discard or press down"}</b>
             : <span>Waiting for <b>{game.current}</b>…</span>}
         </div>
       </div>
+
+      {/* Discard Pile Viewer Popup / Modal */}
+      {isViewerOpen && (
+        isPinned || isHolding ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && isPinned) setIsPinned(false);
+            }}
+          >
+            <DiscardViewer
+              discard={game.discard}
+              isPinned={isPinned}
+              isHolding={isHolding}
+              onClose={() => { setIsPinned(false); setIsHolding(false); }}
+            />
+          </div>
+        ) : (
+          <div
+            className="fixed z-50 pointer-events-auto shadow-2xl animate-in fade-in duration-150"
+            style={popoverPos ? { top: `${popoverPos.top}px`, left: `${popoverPos.left}px` } : undefined}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <DiscardViewer
+              discard={game.discard}
+              isPinned={false}
+              isHolding={false}
+              onClose={() => setIsHovered(false)}
+            />
+          </div>
+        )
+      )}
 
       {teams.map((t) => {
         const members = game.players.filter((p) => p.team === t).map((p) => p.id).join(", ");
