@@ -59,7 +59,7 @@ function Combo({ c, mine, canExtend, selected, onExtend }: {
     c.closed
       ? "bg-emerald-900/60 ring-2 ring-emerald-400 shadow-emerald-400/30 shadow-md"
       : "bg-black/15",
-    canExtend ? "cursor-pointer hover:bg-white/15 ring-2 ring-amber-300/70" : "",
+    canExtend ? "cursor-pointer hover:bg-white/15 ring-2 ring-amber-300/70 active:scale-95 touch-manipulation" : "",
   ].join(" ");
 
   return (
@@ -102,29 +102,31 @@ export function Table({ game, me, hasSelection, selected, onExtend, onDiscardDro
   const top = game.discard[game.discard.length - 1];
   const canExtend = (c: ComboV) => myTurn && game.phase === "play" && hasSelection && c.team === myTeam && !c.closed;
   return (
-    <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
+    <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-2 sm:p-3">
       <div className="flex flex-wrap gap-2">
         {game.players.filter((p) => p.id !== me).map((p) => <Opponent key={p.id} p={p} current={game.current === p.id} />)}
       </div>
 
-      <div className="flex items-start gap-6" style={{ ["--cw" as string]: "clamp(40px, 4.8vw, 70px)" }}>
-        <div className="text-center text-xs">
-          <button disabled={!(myTurn && game.phase === "draw")} onClick={onDraw} title="Draw one card"
-            className="block disabled:opacity-60 enabled:ring-2 enabled:ring-amber-400 rounded-md transition-all">
-            <CardBack />
-          </button>
-          <div className="mt-1">Draw ({game.draw_count})</div>
-        </div>
-        <div className="text-center text-xs">
-          <div className="flex min-h-[calc(var(--cw)*1.4)] min-w-[var(--cw)] items-center rounded-md border border-dashed border-white/40"
-            onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const id = e.dataTransfer.getData("text/plain"); if (id) onDiscardDrop(id); }}>
-            {game.discard.slice(-5).map((c, i) => <CardFace key={c.id} card={c} style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.7)" }} />)}
+      <div className="flex flex-wrap items-center gap-3 sm:gap-6" style={{ ["--cw" as string]: "clamp(40px, 4.8vw, 70px)" }}>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="text-center text-xs">
+            <button disabled={!(myTurn && game.phase === "draw")} onClick={onDraw} title="Draw one card"
+              className="block disabled:opacity-60 enabled:ring-2 enabled:ring-amber-400 rounded-md transition-all active:scale-95 touch-manipulation">
+              <CardBack />
+            </button>
+            <div className="mt-1 font-medium">Draw ({game.draw_count})</div>
           </div>
-          <div className="mt-1">Discard ({game.discard.length}){!top && " · empty"}</div>
-          <button disabled={!(myTurn && game.phase === "draw" && game.discard.length > 0)} onClick={onTakeDiscard}
-            className="mt-1 rounded bg-amber-400 px-2 py-0.5 font-semibold text-black disabled:opacity-40 transition-opacity">Take whole pile</button>
+          <div className="text-center text-xs">
+            <div className="flex min-h-[calc(var(--cw)*1.4)] min-w-[var(--cw)] items-center rounded-md border border-dashed border-white/40"
+              onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const id = e.dataTransfer.getData("text/plain"); if (id) onDiscardDrop(id); }}>
+              {game.discard.slice(-5).map((c, i) => <CardFace key={c.id} card={c} style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.7)" }} />)}
+            </div>
+            <div className="mt-1 font-medium">Discard ({game.discard.length}){!top && " · empty"}</div>
+            <button disabled={!(myTurn && game.phase === "draw" && game.discard.length > 0)} onClick={onTakeDiscard}
+              className="mt-1 rounded bg-amber-400 px-2 py-0.5 font-semibold text-black disabled:opacity-40 transition-opacity active:scale-95 touch-manipulation">Take pile</button>
+          </div>
         </div>
-        <div className="text-sm">
+        <div className="text-xs sm:text-sm flex-1 min-w-[140px]">
           {game.phase === "over" ? <b>Game over</b> : myTurn
             ? <b className="text-amber-300">Your turn: {game.phase === "draw" ? "draw a card" : "lay down, then discard or press down"}</b>
             : <span>Waiting for <b>{game.current}</b>…</span>}

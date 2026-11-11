@@ -12,6 +12,8 @@ interface Props {
   me: string;
   chat: ChatMsg[];
   sendChat: (text: string) => void;
+  className?: string;
+  onClose?: () => void;
 }
 
 function ChatPanel({ me, chat, sendChat }: { me: string; chat: ChatMsg[]; sendChat: (t: string) => void }) {
@@ -42,14 +44,14 @@ function ChatPanel({ me, chat, sendChat }: { me: string; chat: ChatMsg[]; sendCh
       </ul>
       <form onSubmit={submit} className="flex gap-1">
         <input
-          className="flex-1 rounded bg-black/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400"
+          className="flex-1 rounded bg-black/30 px-2 py-1 text-sm sm:text-xs focus:outline-none focus:ring-1 focus:ring-amber-400"
           placeholder="Say something…"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           maxLength={500}
         />
         <button type="submit" disabled={!draft.trim()}
-          className="rounded bg-amber-400 px-2 py-1 text-xs font-semibold text-black disabled:opacity-40 transition-opacity">
+          className="rounded bg-amber-400 px-2 py-1 text-xs font-semibold text-black disabled:opacity-40 transition-opacity active:scale-95 touch-manipulation">
           Send
         </button>
       </form>
@@ -57,14 +59,25 @@ function ChatPanel({ me, chat, sendChat }: { me: string; chat: ChatMsg[]; sendCh
   );
 }
 
-export function Sidebar({ game, code, me, chat, sendChat }: Props) {
+export function Sidebar({ game, code, me, chat, sendChat, className, onClose }: Props) {
   const myTeam = game.players.find(p => p.id === me)?.team;
   const availableCount = game.sets.filter(s => s.status === "available").length;
   const allClaimed = game.sets.length > 0 && availableCount === 0;
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col gap-4 overflow-y-auto bg-black/25 p-3 text-sm">
-      <div className="text-xs opacity-70">Room <b className="tracking-widest">{code}</b></div>
+    <aside className={`flex flex-col gap-4 overflow-y-auto p-3 text-sm ${className ?? "w-64 shrink-0 bg-black/25"}`}>
+      <div className="flex items-center justify-between">
+        <div className="text-xs opacity-70">Room <b className="tracking-widest">{code}</b></div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white transition-colors"
+            title="Close"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Bukharo sets */}
       <section>

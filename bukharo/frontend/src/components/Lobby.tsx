@@ -26,24 +26,26 @@ export function Lobby({ room, me, send }: Props) {
   };
   const input = "w-24 rounded bg-black/30 px-2 py-1 text-right";
   return (
-    <div className="mx-auto max-w-3xl space-y-5 p-6">
-      <h2 className="text-2xl font-bold">Lobby · room <span className="tracking-widest text-amber-300">{room.code}</span></h2>
-      <p className="text-sm opacity-80">Share the code (or this page's link) with your friends.</p>
-      <table className="w-full text-sm">
-        <thead><tr className="text-left opacity-70"><th>Player</th><th>Team (blank = solo)</th><th>Ready</th></tr></thead>
-        <tbody>
-          {room.members.map((m) => (
-            <tr key={m.username} className="border-t border-white/10">
-              <td className="py-1">{m.username}{m.username === room.host ? " ★ host" : ""}</td>
-              <td>{isHost
-                ? <input defaultValue={m.team} className="w-28 rounded bg-black/30 px-2 py-0.5" maxLength={32}
-                    onBlur={(e) => e.target.value !== m.team && send({ type: "SET_TEAM", user: m.username, team: e.target.value })} />
-                : m.team || "—"}</td>
-              <td>{m.ready ? "✅" : "…"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-5 p-4 sm:p-6">
+      <h2 className="text-xl sm:text-2xl font-bold">Lobby · room <span className="tracking-widest text-amber-300">{room.code}</span></h2>
+      <p className="text-xs sm:text-sm opacity-80">Share the code (or this page's link) with your friends.</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs sm:text-sm min-w-[280px]">
+          <thead><tr className="text-left opacity-70"><th>Player</th><th>Team (blank = solo)</th><th>Ready</th></tr></thead>
+          <tbody>
+            {room.members.map((m) => (
+              <tr key={m.username} className="border-t border-white/10">
+                <td className="py-1">{m.username}{m.username === room.host ? " ★ host" : ""}</td>
+                <td>{isHost
+                  ? <input defaultValue={m.team} className="w-24 sm:w-28 rounded bg-black/30 px-2 py-0.5 text-xs sm:text-sm" maxLength={32}
+                      onBlur={(e) => e.target.value !== m.team && send({ type: "SET_TEAM", user: m.username, team: e.target.value })} />
+                  : m.team || "—"}</td>
+                <td>{m.ready ? "✅" : "…"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="text-xs opacity-70">Seating follows join order. For team play, give teammates the same team name.</p>
       <button onClick={() => send({ type: "READY", ready: !mine?.ready })}
         className={`rounded px-4 py-2 font-semibold ${mine?.ready ? "bg-slate-600" : "bg-emerald-600"}`}>{mine?.ready ? "Not ready" : "I'm ready"}</button>
