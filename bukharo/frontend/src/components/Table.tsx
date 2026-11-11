@@ -13,17 +13,51 @@ const dropIds = (e: React.DragEvent, selected: Set<string>) => {
   return id ? (selected.has(id) ? [...selected] : [id]) : [];
 };
 
-function Opponent({ p, current }: { p: import("../types").PlayerV; current: boolean }) {
+function Opponent({
+  p,
+  current,
+  prevCount,
+}: {
+  p: import("../types").PlayerV;
+  current: boolean;
+  prevCount?: number;
+}) {
+  const isGaining = prevCount !== undefined && p.hand_count > prevCount;
   return (
-    <div className={`rounded-lg p-2 transition-all ${current ? "bg-amber-400/25 ring-2 ring-amber-400 shadow-amber-400/20 shadow-lg" : "bg-black/20"}`}>
+    <div
+      className={`rounded-lg p-2 transition-all duration-300 ${
+        isGaining
+          ? "bg-amber-400/30 ring-2 ring-amber-300 shadow-md scale-[1.02]"
+          : current
+            ? "bg-amber-400/25 ring-2 ring-amber-400 shadow-amber-400/20 shadow-lg"
+            : "bg-black/20"
+      }`}
+    >
       <div className="mb-1 flex flex-wrap items-center gap-2 text-sm">
-        <b>{p.id}</b><span className="opacity-70">{p.hand_count} cards</span>
+        <b>{p.id}</b>
+        <span className="opacity-70">{p.hand_count} cards</span>
         {current && <span className="rounded bg-amber-400 px-1.5 text-xs font-bold text-black">TURN</span>}
         <span className={`rounded px-1.5 text-xs ${p.opened ? "bg-emerald-600" : "bg-slate-600"}`}>{p.opened ? "opened" : "not opened"}</span>
         {p.claimed_sets.length > 0 && <span className="rounded bg-sky-700 px-1.5 text-xs">sets: {p.claimed_sets.map((i) => i + 1).join(",")}</span>}
       </div>
-      <div className="flex" style={{ ["--cw" as string]: "clamp(22px, 2.6vw, 38px)" }}>
-        {Array.from({ length: p.hand_count }, (_, i) => <CardBack key={i} style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.65)" }} />)}
+      <div
+        className="flex"
+        style={{ ["--cw" as string]: "clamp(22px, 2.6vw, 38px)" }}
+      >
+        {Array.from({ length: p.hand_count }, (_, i) => {
+          const isNewCard = prevCount !== undefined && i >= prevCount;
+          return (
+            <div
+              key={i}
+              className={isNewCard ? "animate-slide-into-opponent" : ""}
+              style={{
+                marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.65)",
+              }}
+            >
+              <CardBack />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -181,6 +215,32 @@ export function Table({ game, me, hasSelection, selected, onExtend, onDiscardDro
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
   const holdTimerRef = useRef<number | null>(null);
   const pileRef = useRef<HTMLDivElement>(null);
+  const prevGameRef = useRef<GameV | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [recentDiscardId, setRecentDiscardId] = useState<string | null>(null);
+  const [prevOpponentCounts, setPrevOpponentCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const prev = prevGameRef.current;
+    prevGameRef.current = game;
+    if (!prev) {
+      setPrevOpponentCounts(Object.fromEntries(game.players.map((p) => [p.id, p.hand_count])));
+      return;
+    }
+
+    if (game.draw_count < prev.draw_count) {
+      setIsDrawing(true);
+      setTimeout(() => setIsDrawing(false), 380);
+    }
+
+    if (game.discard.length > prev.discard.length && game.discard.length > 0) {
+      const topId = game.discard[game.discard.length - 1].id;
+      setRecentDiscardId(topId);
+      setTimeout(() => setRecentDiscardId(null), 500);
+    }
+
+    setPrevOpponentCounts(Object.fromEntries(prev.players.map((p) => [p.id, p.hand_count])));
+  }, [game]);
 
   useEffect(() => {
     if (isHovered && pileRef.current) {
@@ -222,15 +282,27 @@ export function Table({ game, me, hasSelection, selected, onExtend, onDiscardDro
   return (
     <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-2 sm:p-3">
       <div className="flex flex-wrap gap-2">
-        {game.players.filter((p) => p.id !== me).map((p) => <Opponent key={p.id} p={p} current={game.current === p.id} />)}
+        {game.players.filter((p) => p.id !== me).map((p) => (
+          <Opponent
+            key={p.id}
+            p={p}
+            current={game.current === p.id}
+            prevCount={prevOpponentCounts[p.id]}
+          />
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 sm:gap-6" style={{ ["--cw" as string]: "clamp(40px, 4.8vw, 70px)" }}>
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="text-center text-xs">
             <button disabled={!(myTurn && game.phase === "draw")} onClick={onDraw} title="Draw one card"
-              className="block disabled:opacity-60 enabled:ring-2 enabled:ring-amber-400 rounded-md transition-all active:scale-95 touch-manipulation">
+              className="relative block disabled:opacity-60 enabled:ring-2 enabled:ring-amber-400 rounded-md transition-all active:scale-95 touch-manipulation">
               <CardBack />
+              {isDrawing && (
+                <div className="absolute inset-0 pointer-events-none animate-slide-out-deck z-10">
+                  <CardBack />
+                </div>
+              )}
             </button>
             <div className="mt-1 font-medium">Draw ({game.draw_count})</div>
           </div>
@@ -253,9 +325,19 @@ export function Table({ game, me, hasSelection, selected, onExtend, onDiscardDro
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { const id = e.dataTransfer.getData("text/plain"); if (id) onDiscardDrop(id); }}
               >
-                {game.discard.slice(-5).map((c, i) => (
-                  <CardFace key={c.id} card={c} style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.7)" }} />
-                ))}
+                {game.discard.slice(-5).map((c, i, arr) => {
+                  const isTop = i === arr.length - 1;
+                  const isRecent = isTop && c.id === recentDiscardId;
+                  return (
+                    <div
+                      key={c.id}
+                      className={isRecent ? "animate-slide-into-place" : ""}
+                      style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.7)" }}
+                    >
+                      <CardFace card={c} />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

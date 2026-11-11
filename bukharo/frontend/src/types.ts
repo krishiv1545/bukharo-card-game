@@ -4,7 +4,7 @@ export interface PlayerV { id: string; team: string; hand_count: number; opened:
 export interface ComboV { id: string; team: string; creator: string; kind: "sequence" | "set"; cards: CardT[]; wild_ids: string[]; closed: boolean }
 export interface SetV { index: number; status: "available" | "claimed"; claimed_by: string | null }
 export interface Breakdown {
-  laid_points: number; clean_sevens: number; dirty_sevens: number; seven_aces: number;
+  laid_points: number; clean_sevens: number; dirty_sevens: number; seven_aces: number; seven_twos?: number;
   press_downs: number; hand_penalty: number; total: number;
 }
 export interface GameV {

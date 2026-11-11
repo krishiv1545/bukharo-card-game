@@ -14,7 +14,7 @@ const NO_CARDS: CardT[] = [];
 
 const COLS: [string, string][] = [
   ["laid_points", "Laid"], ["clean_sevens", "Clean 7"], ["dirty_sevens", "Dirty 7"],
-  ["seven_aces", "Aces"], ["press_downs", "Press"], ["hand_penalty", "Hand -"], ["total", "Total"],
+  ["seven_aces", "Aces"], ["seven_twos", "Seven 2s"], ["press_downs", "Press"], ["hand_penalty", "Hand -"], ["total", "Total"],
 ];
 
 function ResultModal({ game, me, onClose }: { game: import("./types").GameV; me: string; onClose: () => void }) {
@@ -91,10 +91,50 @@ export default function RoomView({ code, me, leave }: { code: string; me: string
   const game = state?.game ?? null;
   const { cards, move, sortBy, autoCenter, setAutoCenter } = useHandOrder(`bukharo:${code}:${me}`, game?.my_hand ?? NO_CARDS);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pickedCardIds, setPickedCardIds] = useState<Set<string>>(new Set());
+  const prevMyHandIdsRef = useRef<Set<string>>(new Set());
+  const prevTurnPhaseRef = useRef<{ current: string; phase: string } | null>(null);
   const [resultDismissed, setResultDismissed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [lastSeenChatCount, setLastSeenChatCount] = useState(chat.length);
   const { themeId, setThemeId } = useTheme();
+
+  useEffect(() => {
+    if (!game) {
+      setPickedCardIds(new Set());
+      prevTurnPhaseRef.current = null;
+      prevMyHandIdsRef.current = new Set();
+      return;
+    }
+
+    const currentHandIds = new Set(game.my_hand.map((c) => c.id));
+
+    if (game.current !== me || game.phase === "over") {
+      setPickedCardIds(new Set());
+    } else if (game.phase === "draw") {
+      setPickedCardIds(new Set());
+      prevMyHandIdsRef.current = currentHandIds;
+    } else if (game.phase === "play") {
+      const prev = prevTurnPhaseRef.current;
+      if (prev?.current === me && prev?.phase === "draw") {
+        const newlyAdded = game.my_hand.filter((c) => !prevMyHandIdsRef.current.has(c.id)).map((c) => c.id);
+        if (newlyAdded.length > 0) {
+          setPickedCardIds(new Set(newlyAdded));
+        }
+      } else {
+        setPickedCardIds((existing) => {
+          if (existing.size === 0) return existing;
+          const filtered = new Set([...existing].filter((id) => currentHandIds.has(id)));
+          return filtered.size === existing.size ? existing : filtered;
+        });
+      }
+    }
+
+    prevTurnPhaseRef.current = { current: game.current, phase: game.phase };
+    if (game.phase !== "play") {
+      prevMyHandIdsRef.current = currentHandIds;
+    }
+  }, [game, me]);
 
   useEffect(() => {
     if (sidebarOpen) {
@@ -261,7 +301,7 @@ export default function RoomView({ code, me, leave }: { code: string; me: string
                 Tap cards to select, then lay down, discard, or tap a pile to add.
               </span>
             </div>
-            <Hand cards={cards} selected={selected} toggle={toggle} move={move} sortBy={sortBy} autoCenter={autoCenter} setAutoCenter={setAutoCenter} />
+            <Hand cards={cards} selected={selected} pickedCardIds={pickedCardIds} toggle={toggle} move={move} sortBy={sortBy} autoCenter={autoCenter} setAutoCenter={setAutoCenter} />
           </div>
 
           {/* Victory / Defeat modal */}

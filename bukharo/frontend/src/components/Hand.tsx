@@ -1,10 +1,16 @@
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { CardT } from "../types";
-import { CardFace } from "./Card";
+import { CardFace, SYM, label } from "./Card";
 
 interface Props {
-  cards: CardT[]; selected: Set<string>; toggle: (id: string) => void; move: (id: string, before: string | null) => void;
+  cards: CardT[];
+  selected: Set<string>;
+  pickedCardIds?: Set<string>;
+  toggle: (id: string) => void;
+  move: (id: string, before: string | null) => void;
   sortBy: (m: "suit" | "rank") => void;
-  autoCenter: boolean; setAutoCenter: (v: boolean) => void;
+  autoCenter: boolean;
+  setAutoCenter: (v: boolean) => void;
 }
 
 function makeDragImage(e: React.DragEvent): () => void {
@@ -17,7 +23,86 @@ function makeDragImage(e: React.DragEvent): () => void {
   return () => ghost.remove();
 }
 
-export function Hand({ cards, selected, toggle, move, sortBy, autoCenter, setAutoCenter }: Props) {
+function GhostCard({ card }: { card?: CardT }) {
+  if (!card) {
+    return (
+      <div
+        className="relative aspect-[5/7] shrink-0 select-none rounded-md border-2 border-dashed border-amber-400 bg-amber-400/20 shadow-md pointer-events-none"
+        style={{ width: "var(--cw)" }}
+      />
+    );
+  }
+  const red = card.suit === "H" || card.suit === "D";
+  return (
+    <div
+      className={`relative aspect-[5/7] shrink-0 select-none rounded-md border-2 border-dashed border-amber-400 bg-white/50 backdrop-blur-[1px] shadow-lg pointer-events-none transition-transform ${
+        red ? "text-red-600/70" : "text-slate-900/70"
+      }`}
+      style={{ width: "var(--cw)" }}
+    >
+      <div className="absolute left-[8%] top-[4%] font-semibold leading-none opacity-60" style={{ fontSize: "calc(var(--cw) * 0.27)" }}>
+        {label(card.rank)}<br />{SYM[card.suit]}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center opacity-40" style={{ fontSize: "calc(var(--cw) * 0.5)" }}>
+        {SYM[card.suit]}
+      </div>
+      <div className="absolute inset-0 rounded-md bg-amber-400/15 pointer-events-none" />
+    </div>
+  );
+}
+
+export function Hand({ cards, selected, pickedCardIds, toggle, move, sortBy, autoCenter, setAutoCenter }: Props) {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const draggedCard = cards.find((c) => c.id === draggedId);
+
+  useEffect(() => {
+    const onDragEnd = () => {
+      setDraggedId(null);
+      setDropIndex(null);
+    };
+    window.addEventListener("dragend", onDragEnd);
+    return () => window.removeEventListener("dragend", onDragEnd);
+  }, []);
+
+  const handleCardDragOver = (e: React.DragEvent, cardIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isRightHalf = e.clientX > rect.left + rect.width / 2;
+    const targetIndex = isRightHalf ? cardIndex + 1 : cardIndex;
+    setDropIndex(targetIndex);
+  };
+
+  const handleContainerDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    if (e.clientX < containerRect.left + 50) {
+      setDropIndex(0);
+    } else {
+      setDropIndex(cards.length);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = e.dataTransfer.getData("text/plain") || draggedId;
+    if (!id) return;
+
+    let insertAt = 0;
+    for (let i = 0; i < targetIndex && i < cards.length; i++) {
+      if (cards[i].id !== id) insertAt++;
+    }
+    const otherCards = cards.filter((c) => c.id !== id);
+    const beforeCard = otherCards[insertAt] ?? null;
+    move(id, beforeCard ? beforeCard.id : null);
+    setDraggedId(null);
+    setDropIndex(null);
+  };
+
   return (
     <div className="px-2 sm:px-3 pb-2 sm:pb-3 pt-3 sm:pt-4" style={{ ["--cw" as string]: "clamp(46px, 10vw, 78px)" }}>
       <div className="mb-1 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-200">
@@ -30,20 +115,69 @@ export function Hand({ cards, selected, toggle, move, sortBy, autoCenter, setAut
         </label>
         <span className="hidden sm:inline opacity-60">Drag to reorder · click to select</span>
       </div>
-      <div className="flex min-h-[calc(var(--cw)*1.45+0.75rem)] items-end overflow-x-auto pb-1 pt-3 touch-pan-x"
-        onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const id = e.dataTransfer.getData("text/plain"); if (id) move(id, null); }}>
+      <div
+        ref={containerRef}
+        className="flex min-h-[calc(var(--cw)*1.45+0.75rem)] items-end overflow-x-auto pb-1 pt-3 touch-pan-x"
+        onDragOver={handleContainerDragOver}
+        onDragLeave={(e) => {
+          if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+            setDropIndex(null);
+          }
+        }}
+        onDrop={(e) => {
+          const target = dropIndex !== null ? dropIndex : cards.length;
+          handleDrop(e, target);
+        }}
+      >
         {cards.map((c, i) => (
-          <CardFace key={c.id} card={c} selected={selected.has(c.id)} draggable
-            style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.42)", cursor: "grab" }}
-            onClick={() => toggle(c.id)}
-            onDragStart={(e) => {
-              e.dataTransfer.setData("text/plain", c.id);
-              const cleanup = makeDragImage(e);
-              setTimeout(cleanup, 0);
-            }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.stopPropagation(); const id = e.dataTransfer.getData("text/plain"); if (id && id !== c.id) move(id, c.id); }} />
+          <Fragment key={c.id}>
+            {dropIndex === i && (
+              <div
+                style={{ marginLeft: i === 0 ? 0 : "calc(var(--cw) * -0.42)" }}
+                className="pointer-events-none z-20 shrink-0"
+              >
+                <GhostCard card={draggedCard} />
+              </div>
+            )}
+            <CardFace
+              card={c}
+              selected={selected.has(c.id)}
+              picked={pickedCardIds?.has(c.id)}
+              draggable
+              style={{
+                marginLeft: i === 0 && dropIndex !== 0 ? 0 : "calc(var(--cw) * -0.42)",
+                cursor: "grab",
+                opacity: draggedId === c.id ? 0.2 : 1,
+                transform: draggedId === c.id ? "scale(0.92)" : undefined,
+              }}
+              onClick={() => toggle(c.id)}
+              onDragStart={(e) => {
+                setDraggedId(c.id);
+                e.dataTransfer.setData("text/plain", c.id);
+                const cleanup = makeDragImage(e);
+                setTimeout(cleanup, 0);
+              }}
+              onDragEnd={() => {
+                setDraggedId(null);
+                setDropIndex(null);
+              }}
+              onDragOver={(e) => handleCardDragOver(e, i)}
+              onDrop={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const isRightHalf = e.clientX > rect.left + rect.width / 2;
+                handleDrop(e, isRightHalf ? i + 1 : i);
+              }}
+            />
+          </Fragment>
         ))}
+        {dropIndex === cards.length && (
+          <div
+            style={{ marginLeft: "calc(var(--cw) * -0.42)" }}
+            className="pointer-events-none z-20 shrink-0"
+          >
+            <GhostCard card={draggedCard} />
+          </div>
+        )}
       </div>
     </div>
   );

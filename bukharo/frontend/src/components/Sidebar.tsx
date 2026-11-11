@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Breakdown, ChatMsg, GameV } from "../types";
 
 const COLS: [keyof Breakdown, string][] = [
-  ["laid_points", "Laid"], ["clean_sevens", "Clean 7"], ["dirty_sevens", "Dirty 7"], ["seven_aces", "Aces"],
+  ["laid_points", "Laid"], ["clean_sevens", "Clean 7"], ["dirty_sevens", "Dirty 7"], ["seven_aces", "Aces"], ["seven_twos", "Seven 2s"],
   ["press_downs", "Press"], ["hand_penalty", "Hand -"], ["total", "Total"],
 ];
 
@@ -90,14 +90,14 @@ export function Sidebar({ game, code, me, chat, sendChat, className, onClose }: 
           )}
         </h3>
         <ul className="space-y-1">
-          {game.sets.map((s, i) => (
+          {game.sets.map((s) => (
             <li key={s.index}
               className={`flex justify-between rounded px-2 py-1 text-xs font-medium ${
                 s.status === "available"
                   ? "bg-emerald-600/80 text-white ring-1 ring-emerald-400"
                   : "bg-slate-700/60 text-slate-300"
               }`}>
-              <span>{i === game.sets.length - 1 && game.sets.length > 1 ? "Bukharo" : `Set ${s.index + 1}`}</span>
+              <span>Bukharo {s.index + 1}</span>
               <span>{s.status === "available" ? "available" : `claimed · ${s.claimed_by}`}</span>
             </li>
           ))}

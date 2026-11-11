@@ -85,8 +85,8 @@ cd frontend && npx tsc -b       # type-check the UI
 - Sequences: same suit, consecutive, ace low (A-2-3) or high (Q-K-A), no wrap-around. Sets: same rank, any suits.
 - 2 is the Ultimate (wild), any number per pile. A 2 in its natural spot is not wild. The Ultimate never leaves its pile
   and repositions itself automatically when the pile changes.
-- A pile closes at exactly 7 cards. Closed piles score only their bonus: clean 200, dirty 100; seven Aces or seven 2s 500;
-  aces mixed with 2s 250. Open piles score face value.
+- A pile closes at exactly 7 cards. Closed piles score only their bonus: clean 200, dirty 100; seven Aces 500;
+  seven 2s 1000; aces mixed with 2s 250. Open piles score face value.
 - Opening needs a clean sequence of 4+. Each press-down is +200 (including the final one); the final pressed card counts nowhere.
 - Round ends immediately on the final press-down; score = laid-down points + bonuses - hand penalties, per team.
 - Defaults: extra sets = players + 1, decks = players + 1 (allowed 2-8), an empty draw pile gets a fresh shuffled deck.

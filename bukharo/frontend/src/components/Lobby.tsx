@@ -4,7 +4,8 @@ import type { RoomV } from "../types";
 interface Props { room: RoomV; me: string; send: (a: object) => void }
 
 const FIELDS: [string, string][] = [["decks", "Decks (blank = players+1)"], ["extra_sets", "Bukharo sets (blank = players+1)"], ["opening_len", "Opening sequence length"]];
-const SCORING: [string, string][] = [["clean_seven", "Clean 7"], ["dirty_seven", "Dirty 7"], ["seven_aces", "Seven Aces"], ["dirty_seven_aces", "Dirty Aces"], ["press_down", "Press-down"]];
+const FIELD_DEFAULTS: Record<string, string> = { opening_len: "4" };
+const SCORING: [string, string][] = [["clean_seven", "Clean 7"], ["dirty_seven", "Dirty 7"], ["seven_aces", "Seven Aces"], ["dirty_seven_aces", "Dirty Aces"], ["seven_twos", "Seven 2s"], ["press_down", "Press-down"]];
 
 export function Lobby({ room, me, send }: Props) {
   const isHost = room.host === me;
@@ -12,13 +13,16 @@ export function Lobby({ room, me, send }: Props) {
   const cfg = room.config as Record<string, unknown>;
   const sc = (cfg.scoring ?? {}) as Record<string, number>;
   const [form, setForm] = useState<Record<string, string>>({
-    ...Object.fromEntries(FIELDS.map(([k]) => [k, cfg[k] === undefined ? "" : String(cfg[k])])),
+    ...Object.fromEntries(FIELDS.map(([k]) => [k, cfg[k] === undefined ? (FIELD_DEFAULTS[k] ?? "") : String(cfg[k])])),
     ...Object.fromEntries(SCORING.map(([k]) => [k, sc[k] === undefined ? "" : String(sc[k])])),
     refill: cfg.refill_deck_when_empty === false ? "off" : "on",
   });
   const apply = () => {
     const config: Record<string, unknown> = { refill_deck_when_empty: form.refill !== "off" };
-    for (const [k] of FIELDS) if (form[k].trim() !== "") config[k] = Number(form[k]);
+    for (const [k] of FIELDS) {
+      const val = form[k].trim() !== "" ? form[k].trim() : FIELD_DEFAULTS[k];
+      if (val !== undefined && val !== "") config[k] = Number(val);
+    }
     const scoring: Record<string, number> = {};
     for (const [k] of SCORING) if (form[k].trim() !== "") scoring[k] = Number(form[k]);
     if (Object.keys(scoring).length) config.scoring = scoring;
@@ -54,7 +58,7 @@ export function Lobby({ room, me, send }: Props) {
         <legend className="px-1 text-sm font-semibold">Game settings {isHost ? "" : "(host only)"}</legend>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {FIELDS.map(([k, l]) => <label key={k} className="flex items-center justify-between gap-2 text-sm">{l}
-            <input className={input} inputMode="numeric" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></label>)}
+            <input className={input} inputMode="numeric" placeholder={FIELD_DEFAULTS[k] ?? "default"} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></label>)}
           {SCORING.map(([k, l]) => <label key={k} className="flex items-center justify-between gap-2 text-sm">{l} points
             <input className={input} inputMode="numeric" placeholder="default" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></label>)}
           <label className="flex items-center justify-between gap-2 text-sm">Add a deck when the draw pile runs out

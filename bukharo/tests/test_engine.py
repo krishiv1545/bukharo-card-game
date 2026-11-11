@@ -3,7 +3,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 import pytest
 from engine.cards import Card, build_decks
 from engine.combinations import validate, Combination, InvalidCombination, move_card
-from engine.scoring import score_round
+from engine.scoring import score_round, ScoringConfig
 
 _n = itertools.count()
 def C(rank, suit="S", deck=1):
@@ -92,4 +92,11 @@ def test_seven_aces_variants():
     assert score_round([Combination.create("b", "T", "p", mixed)], [], 0).seven_aces == 250
     twos = [C(2, s, d) for s in "SHD" for d in (1, 2)] + [C(2, "C")]                 # 2222222
     b = score_round([Combination.create("c", "T", "p", twos)], [], 0)
-    assert b.seven_aces == 500 and b.clean_sevens == 0
+    assert b.seven_twos == 1000 and b.clean_sevens == 0 and b.total == 1000
+
+def test_seven_twos_custom_config():
+    twos = [C(2, s, d) for s in "SHD" for d in (1, 2)] + [C(2, "C")]
+    c = Combination.create("c", "T", "p", twos)
+    cfg = ScoringConfig(seven_twos=1500)
+    b = score_round([c], [], 0, cfg=cfg)
+    assert b.seven_twos == 1500 and b.total == 1500

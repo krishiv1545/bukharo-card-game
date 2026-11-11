@@ -5,15 +5,20 @@ export const SYM: Record<Suit, string> = { S: "♠", H: "♥", D: "♦", C: "♣
 export const label = (r: number) => (r === 1 ? "A" : r === 11 ? "J" : r === 12 ? "Q" : r === 13 ? "K" : String(r));
 
 interface FaceProps {
-  card: CardT; selected?: boolean; wild?: boolean; style?: CSSProperties; draggable?: boolean;
-  onClick?: () => void; onDragStart?: DragEventHandler; onDragOver?: DragEventHandler; onDrop?: DragEventHandler;
+  card: CardT; selected?: boolean; wild?: boolean; picked?: boolean; style?: CSSProperties; draggable?: boolean;
+  onClick?: () => void; onDragStart?: DragEventHandler; onDragEnd?: DragEventHandler; onDragOver?: DragEventHandler; onDrop?: DragEventHandler;
 }
 
-export function CardFace({ card, selected, wild, style, ...rest }: FaceProps) {
+export function CardFace({ card, selected, wild, picked, style, ...rest }: FaceProps) {
   const red = card.suit === "H" || card.suit === "D";
+  const ringClass = selected
+    ? "-translate-y-3 ring-2 ring-amber-400 shadow-amber-400/30 shadow-lg"
+    : picked
+      ? "-translate-y-2 ring-2 ring-emerald-400 border-emerald-400 shadow-emerald-400/50 shadow-md"
+      : "";
   return (
     <div {...rest} style={{ width: "var(--cw)", ...style }}
-      className={`relative aspect-[5/7] shrink-0 select-none rounded-md border border-slate-400 bg-white shadow-md transition-transform ${red ? "text-red-600" : "text-slate-900"} ${selected ? "-translate-y-3 ring-2 ring-amber-400" : ""}`}>
+      className={`relative aspect-[5/7] shrink-0 select-none rounded-md border border-slate-400 bg-white shadow-md transition-transform ${red ? "text-red-600" : "text-slate-900"} ${ringClass}`}>
       <div className="absolute left-[8%] top-[4%] font-semibold leading-none" style={{ fontSize: "calc(var(--cw) * 0.27)" }}>
         {label(card.rank)}<br />{SYM[card.suit]}
       </div>
